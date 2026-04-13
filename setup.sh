@@ -59,42 +59,63 @@ check_node() {
   fi
 }
 
-# --- npm install ---
+# --- install deps ---
 
 install_deps() {
   DEPS_OK="false"
   NATIVE_OK="false"
 
   if [ "$NODE_OK" = "false" ]; then
-    log "Skipping npm install — Node not available"
+    log "Skipping install — Node not available"
     return
   fi
 
   cd "$PROJECT_ROOT"
 
-  # npm install with --unsafe-perm if root (needed for native modules)
-  local npm_flags=""
-  if [ "$IS_ROOT" = "true" ]; then
-    npm_flags="--unsafe-perm"
-    log "Running as root, using --unsafe-perm"
-  fi
+  # Use bun if available (test/bun branch), otherwise fall back to npm
+  if command -v bun >/dev/null 2>&1 && [ -f "bun.lock" ]; then
+    log "Running bun install"
+    if bun install >> "$LOG_FILE" 2>&1; then
+      DEPS_OK="true"
+      log "bun install succeeded"
+    else
+      log "bun install failed"
+      return
+    fi
 
-  log "Running npm ci $npm_flags"
-  if npm ci $npm_flags >> "$LOG_FILE" 2>&1; then
-    DEPS_OK="true"
-    log "npm install succeeded"
+    # Verify bun:sqlite is accessible
+    log "Verifying bun:sqlite"
+    if bun -e "import { Database } from 'bun:sqlite'; new Database(':memory:').close(); console.log('ok')" >> "$LOG_FILE" 2>&1; then
+      NATIVE_OK="true"
+      log "bun:sqlite loads OK"
+    else
+      log "bun:sqlite failed to load"
+    fi
   else
-    log "npm install failed"
-    return
-  fi
+    # npm install with --unsafe-perm if root (needed for native modules)
+    local npm_flags=""
+    if [ "$IS_ROOT" = "true" ]; then
+      npm_flags="--unsafe-perm"
+      log "Running as root, using --unsafe-perm"
+    fi
 
-  # Verify native module (better-sqlite3)
-  log "Verifying native modules"
-  if node -e "require('better-sqlite3')" >> "$LOG_FILE" 2>&1; then
-    NATIVE_OK="true"
-    log "better-sqlite3 loads OK"
-  else
-    log "better-sqlite3 failed to load"
+    log "Running npm ci $npm_flags"
+    if npm ci $npm_flags >> "$LOG_FILE" 2>&1; then
+      DEPS_OK="true"
+      log "npm install succeeded"
+    else
+      log "npm install failed"
+      return
+    fi
+
+    # Verify native module (better-sqlite3)
+    log "Verifying native modules"
+    if node -e "require('better-sqlite3')" >> "$LOG_FILE" 2>&1; then
+      NATIVE_OK="true"
+      log "better-sqlite3 loads OK"
+    else
+      log "better-sqlite3 failed to load"
+    fi
   fi
 }
 
