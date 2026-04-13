@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 import fs from 'fs';
 import path from 'path';
 
@@ -12,9 +12,9 @@ import {
   TaskRunLog,
 } from './types.js';
 
-let db: Database.Database;
+let db: Database;
 
-function createSchema(database: Database.Database): void {
+function createSchema(database: Database): void {
   database.exec(`
     CREATE TABLE IF NOT EXISTS chats (
       jid TEXT PRIMARY KEY,
@@ -462,7 +462,7 @@ export function updateTask(
   >,
 ): void {
   const fields: string[] = [];
-  const values: unknown[] = [];
+  const values: (string | null)[] = [];
 
   if (updates.prompt !== undefined) {
     fields.push('prompt = ?');

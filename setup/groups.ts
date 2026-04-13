@@ -8,7 +8,7 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 
 import { STORE_DIR } from '../src/config.js';
 import { logger } from '../src/logger.js';
@@ -115,7 +115,7 @@ import makeWASocket, { useMultiFileAuthState, makeCacheableSignalKeyStore, Brows
 import pino from 'pino';
 import path from 'path';
 import fs from 'fs';
-import Database from 'better-sqlite3';
+import { Database } from 'bun:sqlite';
 
 const logger = pino({ level: 'silent' });
 const authDir = path.join('store', 'auth');
@@ -182,7 +182,7 @@ sock.ev.on('connection.update', async (update) => {
     const tmpScript = path.join(projectRoot, '.tmp-group-sync.mjs');
     fs.writeFileSync(tmpScript, syncScript, 'utf-8');
     try {
-      const output = execSync(`node ${tmpScript}`, {
+      const output = execSync(`bun ${tmpScript}`, {
         cwd: projectRoot,
         encoding: 'utf-8',
         timeout: 45000,
